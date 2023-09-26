@@ -22,6 +22,7 @@
 #include "FreeRTOSConfig.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "timers.h"
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -60,7 +61,7 @@ void first_led(void *sys_clock)
         // Switch state every 0.5s, to keep synchronous even when LED is turned on for 10s by button click
         led1_state = !led1_state;
         // If button has been clicked, skip actually toggling LED
-        if(g_led1_skip <= 0)
+        if(g_led1_skip == 0)
         {
             // Toggle led 1
             LEDWrite(1, !led1_state);
@@ -73,11 +74,6 @@ void first_led(void *sys_clock)
             {
                 UARTprintf("\nLED 1 OFF\n");
             }
-        }
-        //
-        else
-        {
-            g_led1_skip--;
         }
     }
 }
@@ -101,7 +97,7 @@ void second_led(void *sys_clock)
         // Switch state every 1s, to keep synchronous even when LED is turned on for 10s by button click
         led2_state = !led2_state;
         // If button has been clicked, skip actually toggling LED
-        if(g_led2_skip <= 0)
+        if(g_led2_skip == 0)
         {
             // Toggle led 2
             LEDWrite(2, ((!led2_state) * 2));
@@ -114,11 +110,6 @@ void second_led(void *sys_clock)
             {
                 UARTprintf("\nLED 2 OFF\n");
             }
-        }
-        //
-        else
-        {
-            g_led2_skip--;
         }
     }
 }
@@ -185,11 +176,24 @@ void fourth_led(void *sys_clock)
     }
 }
 //=============================================================================
+// LED1 timer callback function
+static void led1_timer_callback(TimerHandle_t xTimer)
+{
+    // 10 ms has passed, stop skipping toggling of led1
+    g_led1_skip = 0;
+}
+//=============================================================================
 // Turn on LED 1 for 10s once left button is pressed
 void first_button(void *sys_clock)
 {
     //-----------------------------------------------------------------------------
     unsigned char ucDelta, ucState;
+    // ms to wait, 10s
+    const TickType_t wait_time = pdMS_TO_TICKS(10000);
+    TimerHandle_t led1_timer;
+    // Create 10ms timer
+    // pdFALSE makes the timer non periodic
+    led1_timer = xTimerCreate(( const char * ) "LED 1 timer", wait_time, pdFALSE, ( void * ) 0, led1_timer_callback);
     //-----------------------------------------------------------------------------
 
     for( ;; )
@@ -200,14 +204,23 @@ void first_button(void *sys_clock)
         // LEFT button turns on first LED for 10 sec
         if (BUTTON_PRESSED(LEFT_BUTTON, ucState, ucDelta) || BUTTON_RELEASED(LEFT_BUTTON, ucState, ucDelta))
         {
-            // LED 1 on for 20*0.5s = 10s
-            g_led1_skip = 20;
+            // Skip toggling LED 1
+            g_led1_skip = 1;
             // Turn on led 1.
             LEDWrite(1, 1);
+            // Start 10ms timer
+            xTimerStart(led1_timer, 0 );
             // Print action on serial
             UARTprintf("\nLED 1 ON\n");
         }
     }
+}
+//=============================================================================
+// LED2 timer callback function
+static void led2_timer_callback(TimerHandle_t xTimer)
+{
+    // 10 ms has passed, stop skipping toggling of led2
+    g_led2_skip = 0;
 }
 //=============================================================================
 // Turn on LED 2 for 10s once right button is pressed
@@ -215,6 +228,12 @@ void second_button(void *sys_clock)
 {
     //-----------------------------------------------------------------------------
     unsigned char ucDelta, ucState;
+    // ms to wait, 10s
+    const TickType_t wait_time = pdMS_TO_TICKS(10000);
+    TimerHandle_t led2_timer;
+    // Create 10ms timer
+    // pdFALSE makes the timer non periodic
+    led2_timer = xTimerCreate((const char*) "LED 2 timer", wait_time, pdFALSE, (void*) 0, led2_timer_callback);
     //-----------------------------------------------------------------------------
 
     for( ;; )
@@ -225,10 +244,12 @@ void second_button(void *sys_clock)
         // Right button turns on second LED for 10 sec
         if (BUTTON_PRESSED(RIGHT_BUTTON, ucState, ucDelta) || BUTTON_RELEASED(RIGHT_BUTTON, ucState, ucDelta))
         {
-            // LED 1 on for 10*1s = 10s
-            g_led2_skip = 10;
+            // Skip toggling LED 2
+            g_led2_skip = 1;
             // Turn on led 2.
             LEDWrite(2, 2);
+            // Start 10ms timer
+            xTimerStart(led2_timer, 0 );
             // Print action on serial
             UARTprintf("\nLED 2 ON\n");
         }
