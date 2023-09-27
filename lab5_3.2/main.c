@@ -29,7 +29,7 @@
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-SemaphoreHandle_t mutex_handle;
+SemaphoreHandle_t sem_handle;
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 //=============================================================================
@@ -79,8 +79,8 @@ void task1(void *temp)
         start_time = xTaskGetTickCount();
 
         before_sem = xTaskGetTickCount();
-        // Try to take mutex, block until we can
-        if (xSemaphoreTake(mutex_handle, (TickType_t)portMAX_DELAY) == pdTRUE)
+        // Try to take semaphore, block until we can
+        if (xSemaphoreTake(sem_handle, (TickType_t)portMAX_DELAY) == pdTRUE)
         {
             after_sem = xTaskGetTickCount();
             // Calculate total time waited to get semaphore (delay), convert to miliseconds
@@ -91,9 +91,9 @@ void task1(void *temp)
             UARTprintf("\n- Task 1 started its workload\n");
             workload_function(48000000);
 
-            // Release mutex, continue until we succeed
+            // Release semaphore, continue until we succeed
             UARTprintf("\n- Task 1 sem give\n");
-            while (xSemaphoreGive(mutex_handle) != pdTRUE)
+            while (xSemaphoreGive(sem_handle) != pdTRUE)
             {
                 ;
             }
@@ -103,15 +103,15 @@ void task1(void *temp)
             run_time = floor(((stop_time - start_time)*1000.0) / configTICK_RATE_HZ);
             UARTprintf("\n- Task 1 finished (%dms)\n", run_time);
         }
-        // Unexpected behavior when trying to acquire the mutex
+        // Unexpected behavior when trying to acquire the semaphore
         else
         {
-            UARTprintf("\n !!ERROR WHEN TRYING TO ACQUIRE MUTEX!! \n");
+            UARTprintf("\n !!ERROR WHEN TRYING TO ACQUIRE SEMAPHORE!! \n");
         }
     }
 }
 //=============================================================================
-// Task 2, periodic with 13s, priority 2 (mid). Note that his task does not use the mutex
+// Task 2, periodic with 13s, priority 2 (mid). Note that his task does not use the semaphore
 void task2(void *temp)
 {
     //-----------------------------------------------------------------------------
@@ -161,8 +161,8 @@ void task3(void *temp)
         start_time = xTaskGetTickCount();
 
         before_sem = xTaskGetTickCount();
-        // Try to take mutex
-        if (xSemaphoreTake(mutex_handle, (TickType_t)portMAX_DELAY) == pdTRUE)
+        // Try to take semaphore
+        if (xSemaphoreTake(sem_handle, (TickType_t)portMAX_DELAY) == pdTRUE)
         {
             after_sem = xTaskGetTickCount();
             // Calculate total time waited to get semaphore (delay), convert to miliseconds
@@ -173,9 +173,9 @@ void task3(void *temp)
             UARTprintf("\n+ Task 3 started its workload\n");
             workload_function(36000000);
 
-            // Release mutex, continue until we succeed
+            // Release semaphore, continue until we succeed
             UARTprintf("\n+ Task 3 sem give\n");
-            while (xSemaphoreGive(mutex_handle) != pdTRUE)
+            while (xSemaphoreGive(sem_handle) != pdTRUE)
             {
                 ;
             }
@@ -185,10 +185,10 @@ void task3(void *temp)
             run_time = floor(((stop_time - start_time)*1000.0) / configTICK_RATE_HZ);
             UARTprintf("\n+ Task 3 finished (%dms)\n", run_time);
         }
-        // Unexpected behavior when trying to acquire the mutex
+        // Unexpected behavior when trying to acquire the semaphore
         else
         {
-            UARTprintf("\n !!ERROR WHEN TRYING TO ACQUIRE MUTEX!! \n");
+            UARTprintf("\n !!ERROR WHEN TRYING TO ACQUIRE SEMAPHORE!! \n");
         }
     }
 }
@@ -239,23 +239,23 @@ int main(void)
     //-----------------------------------------------------------------------------
 
     //-----------------------------------------------------------------------------
-    // Create mutex, handle is global
-    mutex_handle = xSemaphoreCreateBinary();
-    // Make sure mutex could be created successfully
-    if(mutex_handle == NULL)
+    // Create semaphore, handle is global
+    sem_handle = xSemaphoreCreateBinary();
+    // Make sure semaphore could be created successfully
+    if(sem_handle == NULL)
     {
-        UARTprintf(" !!MUTEX COULD NOT BE ALLOCATED!! ");
+        UARTprintf(" !!SEMAPHORE COULD NOT BE ALLOCATED!! ");
     }
     // Binary semaphores need to be given instantly upon creation, they start locked
-    while (xSemaphoreGive(mutex_handle) != pdTRUE)
+    while (xSemaphoreGive(sem_handle) != pdTRUE)
     {
         ;
     }
 
     // Create the different tasks
-    task1_return = xTaskCreate(task1, "task 1", 128, (void *) mutex_handle, task1_priority, &task1_handle);
-    task2_return = xTaskCreate(task2, "task 2", 128, (void *) mutex_handle, task2_priority, &task2_handle);
-    task3_return = xTaskCreate(task3, "task 3", 128, (void *) mutex_handle, task3_priority, &task3_handle);
+    task1_return = xTaskCreate(task1, "task 1", 128, (void *) 1, task1_priority, &task1_handle);
+    task2_return = xTaskCreate(task2, "task 2", 128, (void *) 1, task2_priority, &task2_handle);
+    task3_return = xTaskCreate(task3, "task 3", 128, (void *) 1, task3_priority, &task3_handle);
 
     // Make sure all tasks could be created successfully
     if ((task1_return == pdPASS) && (task2_return == pdPASS) && (task3_return == pdPASS))
