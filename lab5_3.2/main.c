@@ -240,11 +240,16 @@ int main(void)
 
     //-----------------------------------------------------------------------------
     // Create mutex, handle is global
-    mutex_handle = xSemaphoreCreateMutex();
+    mutex_handle = xSemaphoreCreateBinary();
     // Make sure mutex could be created successfully
     if(mutex_handle == NULL)
     {
         UARTprintf(" !!MUTEX COULD NOT BE ALLOCATED!! ");
+    }
+    // Binary semaphores need to be given instantly upon creation, they start locked
+    while (xSemaphoreGive(mutex_handle) != pdTRUE)
+    {
+        ;
     }
 
     // Create the different tasks
